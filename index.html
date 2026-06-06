@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Object Detection</title>
+
+<style>
+body{
+    background:#0f172a;
+    color:white;
+    text-align:center;
+    font-family:Arial,sans-serif;
+}
+
+h1{
+    color:#38bdf8;
+}
+
+.container{
+    position:relative;
+    display:inline-block;
+}
+
+video{
+    border:3px solid #38bdf8;
+    border-radius:10px;
+}
+
+canvas{
+    position:absolute;
+    top:0;
+    left:0;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+</head>
+<body>
+
+<h1>Real AI Object Detection </h1>
+
+<div class="container">
+    <video id="video" width="800" height="600" autoplay muted></video>
+    <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+async function setupCamera() {
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video:true
+    });
+
+    video.srcObject = stream;
+
+    return new Promise((resolve)=>{
+        video.onloadedmetadata = ()=>{
+            resolve(video);
+        };
+    });
+}
+
+async function detectObjects(model){
+
+    const predictions = await model.detect(video);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    predictions.forEach(pred=>{
+
+        const [x,y,w,h] = pred.bbox;
+
+        ctx.strokeRect(x,y,w,h);
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "lime";
+
+        ctx.fillStyle = "lime";
+        ctx.font = "18px Arial";
+
+        ctx.fillText(
+            `${pred.class} ${(pred.score*100).toFixed(1)}%`,
+            x,
+            y>20 ? y-5 : y+20
+        );
+    });
+
+    requestAnimationFrame(()=>detectObjects(model));
+}
+
+async function start(){
+
+    await setupCamera();
+
+    const model = await cocoSsd.load();
+
+    detectObjects(model);
+}
+
+start();
+
+</script>
+
+</body>
+</html>
